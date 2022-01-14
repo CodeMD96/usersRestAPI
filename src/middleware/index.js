@@ -1,3 +1,4 @@
+const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const { trusted } = require("mongoose");
 const User = require("../user/user.model");
@@ -12,16 +13,17 @@ exports.hashPassword = async (req, res, next) => {
     }
 };
 
-exports.decryptPassword = async (req, res, next) => {
+exports.tokenCheck = async (req, res, next) => {
     try {
-        req.user = await User.findOne({ username: req.body.username })
-        if (await bcrypt.compare(req.body.password, req.user.password)) {
-            next();
-        } else {
-            throw new Error("line 21 index.js");
+        const token = req.header("Authorization").replace("Bearer ", "");
+        const decodedToken = jwt.verify(token, process.env.SECRET);
+        req.user = await User.findById(decodedToken._id);
+        if (!req.user) {
+            throw new Error("user not found");
         }
+        next();
     } catch (error) {
         console.log(error);
         res.status(500).send({message: "Check server logs"});
     }
-};
+}
